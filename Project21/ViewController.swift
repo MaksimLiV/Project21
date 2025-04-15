@@ -25,10 +25,7 @@ class ViewController: UIViewController, UNUserNotificationCenterDelegate {
         center.requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
             if granted {
                 print("Yay!")
-                
-                let action = UNNotificationAction(identifier: "snooze", title: "Snooze", options: [])
-                let category = UNNotificationCategory(identifier: "alarm", actions: [action], intentIdentifiers: [], options: [])
-                center.setNotificationCategories([category])
+                self.registerCategories()
             } else {
                 print("D'oh!")
             }
@@ -38,16 +35,15 @@ class ViewController: UIViewController, UNUserNotificationCenterDelegate {
     func registerCategories() {
         let center = UNUserNotificationCenter.current()
         center.delegate = self
-    
+        
         let show = UNNotificationAction(identifier: "show", title: "Tell me more", options: .foreground)
-        let category = UNNotificationCategory(identifier: "alarm", actions: [show], intentIdentifiers: [], options: [])
+        let remind = UNNotificationAction(identifier: "remind", title: "Remind me later", options: .foreground)
+        let category = UNNotificationCategory(identifier: "alarm", actions: [show, remind], intentIdentifiers: [], options: [])
         
         center.setNotificationCategories([category])
     }
     
-    @objc func scheduleLocal() {
-        registerCategories()
-        
+    @objc func scheduleLocal(delay: TimeInterval = 5) {
         let center = UNUserNotificationCenter.current()
         
         center.getNotificationSettings { settings in
@@ -56,8 +52,6 @@ class ViewController: UIViewController, UNUserNotificationCenterDelegate {
                 return
             }
             
-            center.removeAllPendingNotificationRequests()
-            
             let content = UNMutableNotificationContent()
             content.title = "Let's wake up call"
             content.body = "The early bird catches the worm, but the second mouse gets the cheese."
@@ -65,7 +59,7 @@ class ViewController: UIViewController, UNUserNotificationCenterDelegate {
             content.userInfo = ["customData": "fizzbuzz"]
             content.sound = .default
             
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
             
             let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
             
@@ -91,10 +85,20 @@ class ViewController: UIViewController, UNUserNotificationCenterDelegate {
             
             switch response.actionIdentifier {
             case UNNotificationDefaultActionIdentifier:
-                print("Default identifier")
+                let ac = UIAlertController(title: "Default Action", message: "You swiped to unlock", preferredStyle: .alert)
+                ac.addAction(UIAlertAction(title: "OK", style: .default))
+                present(ac, animated: true)
                 
             case "show":
-                print("Show more information...")
+                let ac = UIAlertController(title: "More Information", message: "Here's more detail about the notification", preferredStyle: .alert)
+                ac.addAction(UIAlertAction(title: "OK", style: .default))
+                present(ac, animated: true)
+                
+            case "remind":
+                scheduleLocal(delay: 86400)
+                let ac = UIAlertController(title: "Reminder Set", message: "You'll be reminded again in 24 hours", preferredStyle: .alert)
+                ac.addAction(UIAlertAction(title: "OK", style: .default))
+                present(ac, animated: true)
                 
             default:
                 break
